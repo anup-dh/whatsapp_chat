@@ -85,12 +85,23 @@ def last_message(doc, method):
         chat_doc.is_read = 0
         chat_doc.save(ignore_permissions=True)
     else:
-        frappe.get_doc({
+        chat_doc = frappe.get_doc({
             "doctype": "WhatsApp Contact",
             "mobile_no": mobile_no,
-            "last_message": last_message,
+            "last_message": doc.message,
             "contact_name": mobile_no,
             "is_read": 0
-        }).save(ignore_permissions=True)
+        })
+        chat_doc.save(ignore_permissions=True)
+
+    if chat_doc.email and doc.type != 'Outgoing':
+        frappe.publish_realtime(
+            "latest_chat_updates",
+            {
+                "content":  doc.message,
+                "creation": frappe.utils.now(),
+                "room": chat_doc.name
+            }, user= chat_doc.email
+        )
 
     return "ok"

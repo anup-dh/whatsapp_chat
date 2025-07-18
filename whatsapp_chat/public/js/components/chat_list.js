@@ -182,13 +182,7 @@ export default class ChatList {
         return;
       }
 
-      if (
-        !$('.chat-element').is(':visible') &&
-        frappe.Chat.settings.user.enable_notifications === 1
-      ) {
-        frappe.utils.play_sound('chat-notification');
-      }
-
+      frappe.utils.play_sound('chat-message-receive');
       const message =
         res.content.length > 24
           ? res.content.substring(0, 24) + '...'

@@ -4,4 +4,5 @@
 *.swp
 tags
 node_modules
+whatsapp_chat/public/dist/
 __pycache__
