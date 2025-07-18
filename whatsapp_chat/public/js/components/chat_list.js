@@ -200,16 +200,16 @@ export default class ChatList {
     });
 
     frappe.realtime.on('new_room_creation', function (res) {
-      if (
-        !$('.chat-element').is(':visible') &&
-        frappe.Chat.settings.user.enable_notifications === 1
-      ) {
-        frappe.utils.play_sound('chat-notification');
-      }
+      // if (
+      //   !$('.chat-element').is(':visible') &&
+      //   frappe.Chat.settings.user.enable_notifications === 1
+      // ) {
+      // }
 
+      frappe.utils.play_sound('chat-notification');
       res.user = me.user;
-      res.is_admin = me.is_admin;
-      res.user_email = me.user_email;
+      // res.is_admin = me.is_admin;
+      // res.user_email = me.user_email;
       me.create_new_room(res);
     });
 
