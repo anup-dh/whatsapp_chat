@@ -75,7 +75,7 @@ export default class ChatList {
     this.$chat_rooms_container = $(document.createElement('div'));
     this.$chat_rooms_container.addClass('chat-rooms-container');
     this.chat_rooms = [];
-    console.log(this.rooms)
+    //console.log(this.rooms)
     this.rooms.forEach((element) => {
       let profile = {
         user: this.user,
