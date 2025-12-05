@@ -1,7 +1,7 @@
 import ChatRoom from './chat_room';
 import ChatAddRoom from './chat_add_room';
 import ChatUserSettings from './chat_user_settings';
-import { get_rooms, mark_message_read } from './chat_utils';
+import { get_rooms, mark_message_read, set_notification_count } from './chat_utils';
 
 export default class ChatList {
   constructor(opts) {
@@ -188,6 +188,11 @@ export default class ChatList {
           ? res.content.substring(0, 24) + '...'
           : res.content;
 
+      frappe.show_alert({
+          message:__("You have a new message from " + res.contact_name + ": " + message),
+          indicator:'green'
+      }, 5);
+
       chat_room_item[1].set_last_message(message, res.creation);
 
       if ($('.chat-list').length) {
@@ -196,6 +201,12 @@ export default class ChatList {
         me.move_room_to_top(chat_room_item);
       } else if ($('.chat-space').length) {
         mark_message_read(res.room);
+      } else {
+        // Chat widget is closed - still update the navbar counter
+        if (chat_room_item[1].profile.is_read) {
+          set_notification_count('increment');
+          chat_room_item[1].profile.is_read = 0;
+        }
       }
     });
 

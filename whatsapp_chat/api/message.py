@@ -100,7 +100,8 @@ def last_message(doc, method):
             {
                 "content":  doc.message,
                 "creation": frappe.utils.now(),
-                "room": chat_doc.name
+                "room": chat_doc.name,
+                "contact_name": chat_doc.contact_name
             }, user= chat_doc.email
         )
 
