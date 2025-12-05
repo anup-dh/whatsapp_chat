@@ -189,21 +189,35 @@ export default class ChatList {
           : res.content;
 
       frappe.show_alert({
-          message:__("You have a new message from " + res.contact_name + ": " + message),
-          indicator:'green'
-      }, 5);
+          message: `<a href="#" data-action="open-chat" style="text-decoration: none; color: inherit;">
+            <strong>${res.contact_name}</strong><br>
+            <span style="opacity: 0.9;">${message}</span>
+          </a>`,
+          indicator: 'green'
+      }, 5, {
+        'open-chat': function() {
+          // Open chat widget if closed
+          if (!$('.chat-element').is(':visible')) {
+            $('.chat-navbar-icon').click();
+          }
+          // Open the specific chat room after a small delay for widget to open
+          setTimeout(() => {
+            chat_room_item[1].$chat_room.click();
+          }, 100);
+        }
+      });
 
       chat_room_item[1].set_last_message(message, res.creation);
 
-      if ($('.chat-list').length) {
+      if ($('.chat-list').is(':visible')) {
         chat_room_item[1].set_as_unread();
         chat_room_item[1].move_to_top();
         me.move_room_to_top(chat_room_item);
-      } else if ($('.chat-space').length) {
+      } else if ($('.chat-space').is(':visible')) {
         mark_message_read(res.room);
       } else {
-        // Chat widget is closed - still update the navbar counter
-        if (chat_room_item[1].profile.is_read) {
+        // Chat widget is closed - update counter only if room was previously read
+        if (chat_room_item[1].profile.is_read === 1) {
           set_notification_count('increment');
           chat_room_item[1].profile.is_read = 0;
         }
