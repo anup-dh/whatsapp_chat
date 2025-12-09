@@ -19,21 +19,27 @@ def get_all(room: str, user_no: str):
             'Administrator'
         end as sender_user_no,
         case
-            when content_type = 'text' then message
-            else attach
-        end as content
+            when COALESCE(content_type, 'text') = 'text' then COALESCE(message, '')
+            else COALESCE(attach, message, '')
+        end as content,
+        case
+            when COALESCE(content_type, 'text') <> 'text' then message
+            else NULL
+        end as caption,
+        COALESCE(content_type, 'text') as content_type
         from `tabWhatsApp Message` where (`to` = %(user_no)s or `from` = %(user_no)s)
-        AND message_type <> 'Template'
+        AND COALESCE(message_type, '') <> 'Template'
         order by creation asc
     """, {"user_no": user_no}, as_dict=True)
 
 
 @frappe.whitelist()
 def mark_as_read(room):
-    doc = frappe.get_doc("WhatsApp Contact", room)
-    doc.is_read = 1
-    doc.save()
-
+    try:
+        frappe.db.set_value("WhatsApp Contact", room, "is_read", 1, update_modified=False)
+        frappe.db.commit()
+    except Exception:
+        pass  # Ignore concurrent update errors
     return "ok"
 
 
@@ -95,14 +101,25 @@ def last_message(doc, method):
         chat_doc.save(ignore_permissions=True)
 
     if chat_doc.email and doc.type != 'Outgoing':
+        message_data = {
+            "content": doc.message or doc.attach or '',
+            "creation": frappe.utils.now(),
+            "room": chat_doc.name,
+            "contact_name": chat_doc.contact_name,
+            "sender_user_no": mobile_no,
+            "user": "Guest"
+        }
+        # Notify chat list
         frappe.publish_realtime(
             "latest_chat_updates",
-            {
-                "content":  doc.message,
-                "creation": frappe.utils.now(),
-                "room": chat_doc.name,
-                "contact_name": chat_doc.contact_name
-            }, user= chat_doc.email
+            message_data,
+            user=chat_doc.email
+        )
+        # Notify open chat room
+        frappe.publish_realtime(
+            chat_doc.name,
+            message_data,
+            user=chat_doc.email
         )
 
     return "ok"

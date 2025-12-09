@@ -112,7 +112,8 @@ export default class ChatSpace {
         element.content,
         get_time(element.creation),
         message_type,
-        element.sender
+        element.sender,
+        element.caption
       ).prop('outerHTML');
 
       this.prevMessage = element;
@@ -272,13 +273,22 @@ export default class ChatSpace {
   setup_socketio() {
     const me = this;
 
+    // Listen for room-specific messages
     frappe.realtime.on(this.profile.room, function (res) {
       me.receive_message(res, get_time(res.creation));
+    });
+
+    // Also listen for latest_chat_updates and filter by room
+    frappe.realtime.on('latest_chat_updates', function (res) {
+      if (res.room === me.profile.room) {
+        me.receive_message(res, get_time(res.creation));
+      }
     });
   }
 
   destroy_socket_events() {
     frappe.realtime.off(this.profile.room);
+    frappe.realtime.off('latest_chat_updates');
   }
 
   get_typing_changes(res) {
@@ -301,7 +311,7 @@ export default class ChatSpace {
     }
   }
 
-  make_message(content, time, type, name) {
+  make_message(content, time, type, name, caption) {
     const message_class =
       type === 'recipient' ? 'recipient-message' : 'sender-message';
     const $recipient_element = $(document.createElement('div')).addClass(
@@ -346,6 +356,22 @@ export default class ChatSpace {
       $message_element.append($name_element);
     }
     $message_element.append($sanitized_content);
+
+    // Add caption below image/media if present
+    if (caption) {
+      const $caption_element = $(document.createElement('div'))
+        .addClass('message-caption')
+        .css({
+          'padding': 'var(--padding-sm)',
+          'font-size': 'var(--text-sm)',
+          'color': type === 'sender' ? 'var(--white)' : 'var(--text-color)',
+          'background': type === 'sender' ? 'var(--primary-color)' : 'var(--control-bg)',
+          'border-radius': '0 0 13px 13px',
+        })
+        .text(caption);
+      $message_element.append($caption_element);
+    }
+
     $recipient_element.append($message_element);
     $recipient_element.append(`<div class='message-time'>${__(time)}</div>`);
 
@@ -393,7 +419,8 @@ export default class ChatSpace {
 
   receive_message(res, time) {
     let chat_type = 'sender';
-    if (res.sender_user_no === this.profile.user_email) {
+    // Skip if this is our own outgoing message (sender_user_no would be empty or 'Administrator' for outgoing)
+    if (res.sender_user_no === 'Administrator' || res.sender_user_no === this.profile.user) {
       return;
     }
 

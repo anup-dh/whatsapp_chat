@@ -104,15 +104,15 @@ export default class ChatRoom {
 
   setup_events() {
     this.$chat_room.on('click', () => {
+      // Always create new ChatSpace to fetch latest messages
       if (typeof this.chat_space !== 'undefined') {
-        this.chat_space.render();
-      } else {
-        this.chat_space = new ChatSpace({
-          $wrapper: this.$wrapper,
-          chat_list: this.chat_list,
-          profile: this.profile,
-        });
+        this.chat_space.destroy_socket_events();
       }
+      this.chat_space = new ChatSpace({
+        $wrapper: this.$wrapper,
+        chat_list: this.chat_list,
+        profile: this.profile,
+      });
       if (this.profile.is_read === 0) {
         mark_message_read(this.profile.room);
         this.set_as_read();
