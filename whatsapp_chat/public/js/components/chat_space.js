@@ -8,6 +8,7 @@ import {
   set_typing,
   is_image,
   get_avatar_html,
+  mark_message_read,
 } from './chat_utils';
 
 export default class ChatSpace {
@@ -65,6 +66,10 @@ export default class ChatSpace {
       this.setup_messages(res);
       this.setup_actions();
       this.render();
+
+      // Mark messages as read when viewing the chat
+      // This will also send read receipts to WhatsApp if enabled in settings
+      mark_message_read(this.profile.room);
     } catch (error) {
       frappe.msgprint({
         title: __('Error'),
@@ -272,18 +277,37 @@ export default class ChatSpace {
 
   setup_socketio() {
     const me = this;
+    // Track received message IDs to prevent duplicates
+    this.received_message_ids = new Set();
 
     // Listen for room-specific messages
     frappe.realtime.on(this.profile.room, function (res) {
-      me.receive_message(res, get_time(res.creation));
+      me.handle_incoming_message(res);
     });
 
     // Also listen for latest_chat_updates and filter by room
     frappe.realtime.on('latest_chat_updates', function (res) {
       if (res.room === me.profile.room) {
-        me.receive_message(res, get_time(res.creation));
+        me.handle_incoming_message(res);
       }
     });
+  }
+
+  handle_incoming_message(res) {
+    // Create a unique ID for the message to prevent duplicates
+    const msg_id = res.name || `${res.content}-${res.creation}-${res.sender_user_no}`;
+
+    // Skip if we've already processed this message
+    if (this.received_message_ids.has(msg_id)) {
+      return;
+    }
+    this.received_message_ids.add(msg_id);
+
+    // Display the message
+    this.receive_message(res, get_time(res.creation));
+
+    // Mark as read since chat is open and user is viewing it
+    mark_message_read(this.profile.room);
   }
 
   destroy_socket_events() {

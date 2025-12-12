@@ -35,12 +35,62 @@ def get_all(room: str, user_no: str):
 
 @frappe.whitelist()
 def mark_as_read(room):
+    """Mark messages as read in local DB and optionally send read receipts to WhatsApp."""
     try:
+        # Update local contact status
         frappe.db.set_value("WhatsApp Contact", room, "is_read", 1, update_modified=False)
         frappe.db.commit()
+
+        # Send read receipts to WhatsApp if enabled
+        send_whatsapp_read_receipts(room)
     except Exception:
         pass  # Ignore concurrent update errors
     return "ok"
+
+
+def send_whatsapp_read_receipts(room):
+    """Send read receipts to WhatsApp for unread incoming messages."""
+    try:
+        # Get the contact's mobile number
+        contact = frappe.get_doc("WhatsApp Contact", room)
+        if not contact.mobile_no:
+            return
+
+        # Find unread incoming messages for this contact
+        unread_messages = frappe.get_all(
+            "WhatsApp Message",
+            filters={
+                "from": contact.mobile_no,
+                "type": "Incoming",
+                "status": ["not in", ["marked as read"]]
+            },
+            fields=["name", "whatsapp_account"],
+            order_by="creation desc",
+            limit=10
+        )
+
+        if not unread_messages:
+            return
+
+        # Check if auto read receipt is enabled for the account
+        for msg in unread_messages:
+            if not msg.whatsapp_account:
+                continue
+
+            allow_auto_read = frappe.db.get_value(
+                "WhatsApp Account",
+                msg.whatsapp_account,
+                "allow_auto_read_receipt"
+            )
+
+            if allow_auto_read:
+                try:
+                    msg_doc = frappe.get_doc("WhatsApp Message", msg.name)
+                    msg_doc.send_read_receipt()
+                except Exception as e:
+                    frappe.log_error(f"Failed to send read receipt for {msg.name}: {str(e)}", "WhatsApp Chat Read Receipt")
+    except Exception as e:
+        frappe.log_error(f"send_whatsapp_read_receipts error: {str(e)}", "WhatsApp Chat Read Receipt")
 
 
 

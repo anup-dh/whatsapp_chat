@@ -15,7 +15,7 @@ WhatsApp Chat provides a WhatsApp-like chat interface directly within Frappe Des
 - **Chat Interface** - Familiar WhatsApp-like UI integrated into Frappe Desk
 - **Contact Management** - Automatic contact creation from incoming messages
 - **Media Support** - Send and receive images, documents, audio, and video
-- **Read Receipts** - Track message read status
+- **Auto Read Receipts** - Automatically send read receipts to WhatsApp when viewing messages (based on WhatsApp Account settings)
 - **Sound Notifications** - Audio alerts for new messages
 - **Multi-user Support** - Assign contacts to specific users for follow-up
 
